@@ -4,48 +4,70 @@ import os
 import time
 from datetime import datetime
 
-SOUTH, WEST, NORTH, EAST = 23.70, 90.33, 23.90, 90.50
+API_KEY = "acr7QCdblurzBRWJ04ic3SILqbBPi5ej"  
 
-def fetch_traffic_roads():
-    query = f"""
-    [out:json][timeout:90];
-    way["highway"](
-      {SOUTH},{WEST},{NORTH},{EAST}
-    );
-    out body;
-    """
+# Top 5 busiest roads in Dhaka 
+ROUTES = [
+    {
+        "name": "Uttora → FarmGate",
+        "origin": "23.8759,90.3795",
+        "destination": "23.7578,90.3877"
+    },
+    {
+        "name": "Mirpur → Motijhil",
+        "origin": "23.8223,90.3654",
+        "destination": "23.7334,90.4220"
+    },
+    {
+        "name": "Jatrabari → Gulistan",
+        "origin": "23.7104,90.4280",
+        "destination": "23.7234,90.4075"
+    },
+    {
+        "name": "Dhanmondi → Shahbagh",
+        "origin": "23.7461,90.3742",
+        "destination": "23.7387,90.3950"
+    },
+    {
+        "name": "Gazipur → Banani",
+        "origin": "23.9999,90.4203",
+        "destination": "23.7936,90.4066"
+    },
+]
 
-    for attempt in range(3):
-        try:
-            response = requests.post(
-                "https://overpass-api.de/api/interpreter",
-                data={"data": query},
-                timeout=90
-            )
+def fetch_travel_time(route):
+    url = "https://api.tomtom.com/routing/1/calculateRoute/{origin}:{destination}/json".format(
+        origin=route["origin"],
+        destination=route["destination"]
+    )
+    params = {
+        "key": API_KEY,
+        "traffic": "true",
+        "travelMode": "car"
+    }
 
-            if response.status_code != 200:
-                print(f"Bad status: {response.status_code}, retrying...")
-                time.sleep(15)
-                continue
+    try:
+        response = requests.get(url, params=params, timeout=30)
+        data = response.json()
 
-            if not response.text.strip():
-                print(f"Empty response, retrying... (attempt {attempt+1})")
-                time.sleep(15)
-                continue
+        summary = data["routes"][0]["summary"]
+        travel_time_min = round(summary["travelTimeInSeconds"] / 60, 1)
+        no_traffic_min = round(summary["noTrafficTravelTimeInSeconds"] / 60, 1)
+        delay_min = round((summary["travelTimeInSeconds"] - summary["noTrafficTravelTimeInSeconds"]) / 60, 1)
+        distance_km = round(summary["lengthInMeters"] / 1000, 2)
 
-            data = response.json()
-            elements = data.get("elements", [])
-            print(f"Got {len(elements)} elements from API")
-            break
+        return {
+            "travel_time_min": travel_time_min,
+            "no_traffic_min": no_traffic_min,
+            "delay_min": delay_min,
+            "distance_km": distance_km
+        }
 
-        except Exception as e:
-            print(f"Error on attempt {attempt+1}: {e}")
-            time.sleep(15)
-    else:
-        # Still create CSV with error row so file always exists
-        elements = []
-        data = {"elements": []}
+    except Exception as e:
+        print(f"Error for {route['name']}: {e}")
+        return None
 
+def collect_all_routes():
     timestamp = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
     file_exists = os.path.isfile("traffic_data.csv")
 
@@ -54,26 +76,26 @@ def fetch_traffic_roads():
 
         if not file_exists:
             writer.writerow([
-                "timestamp", "road_id", "road_name",
-                "road_type", "max_speed", "lanes", "oneway"
+                "timestamp", "route",
+                "distance_km", "normal_time_min",
+                "current_time_min", "delay_min"
             ])
 
-        if elements:
-            for way in elements:
-                tags = way.get("tags", {})
+        for route in ROUTES:
+            result = fetch_travel_time(route)
+            if result:
                 writer.writerow([
                     timestamp,
-                    way.get("id"),
-                    tags.get("name", "N/A"),
-                    tags.get("highway", "N/A"),
-                    tags.get("maxspeed", "N/A"),
-                    tags.get("lanes", "N/A"),
-                    tags.get("oneway", "no"),
+                    route["name"],
+                    result["distance_km"],
+                    result["no_traffic_min"],
+                    result["travel_time_min"],
+                    result["delay_min"]
                 ])
-        else:
-            # Write empty row so file always gets created
-            writer.writerow([timestamp, "N/A", "N/A", "N/A", "N/A", "N/A", "N/A"])
+                print(f"✅ {route['name']} — {result['travel_time_min']} min (delay: {result['delay_min']} min)")
+            else:
+                writer.writerow([timestamp, route["name"], "N/A", "N/A", "N/A", "N/A"])
 
-    print(f"[{timestamp}] Done — {len(elements)} roads saved")
+    print(f"[{timestamp}] Every Routs collect successfully!")
 
-fetch_traffic_roads()
+collect_all_routes()
