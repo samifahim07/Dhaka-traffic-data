@@ -1,12 +1,13 @@
 import requests
 import csv
 import os
-import time
+import sys
 from datetime import datetime
 
-API_KEY = "acr7QCdblurzBRWJ04ic3SILqbBPi5ej"  
+# API key is read from the environment (set as TOMTOM_API_KEY in GitHub Actions secrets)
+API_KEY = os.environ.get("TOMTOM_API_KEY", "")
 
-# Top 5 busiest roads in Dhaka 
+# Top 5 busiest roads in Dhaka
 ROUTES = [
     {
         "name": "Uttora → FarmGate",
@@ -34,6 +35,7 @@ ROUTES = [
         "destination": "23.7936,90.4066"
     },
 ]
+
 
 def fetch_travel_time(route):
     url = "https://api.tomtom.com/routing/1/calculateRoute/{origin}:{destination}/json".format(
@@ -67,7 +69,12 @@ def fetch_travel_time(route):
         print(f"Error for {route['name']}: {e}")
         return None
 
+
 def collect_all_routes():
+    if not API_KEY:
+        print("ERROR: TOMTOM_API_KEY is not set. Aborting.")
+        sys.exit(1)
+
     timestamp = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
     file_exists = os.path.isfile("traffic_data.csv")
 
@@ -98,4 +105,6 @@ def collect_all_routes():
 
     print(f"[{timestamp}] Every Routs collect successfully!")
 
-collect_all_routes()
+
+if __name__ == "__main__":
+    collect_all_routes()
