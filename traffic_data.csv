@@ -9,3 +9,8 @@ timestamp,route,distance_km,normal_time_min,current_time_min,delay_min
 2026-09-25 14:55:26,Jatrabari → Gulistan,N/A,N/A,N/A,N/A
 2026-09-25 14:55:26,Dhanmondi → Shahbagh,N/A,N/A,N/A,N/A
 2026-09-25 14:55:26,Gazipur → Banani,N/A,N/A,N/A,N/A
+2026-09-25 14:58:25,Uttora → FarmGate,13.31,10.0,10.0,0.0
+2026-09-25 14:58:25,Mirpur → Motijhil,10.47,7.9,7.9,0.0
+2026-09-25 14:58:25,Jatrabari → Gulistan,4.62,6.7,6.7,0.0
+2026-09-25 14:58:25,Dhanmondi → Shahbagh,1.57,1.2,1.2,0.0
+2026-09-25 14:58:25,Gazipur → Banani,27.01,23.5,23.5,0.0
