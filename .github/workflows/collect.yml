@@ -31,6 +31,6 @@ jobs:
         run: |
           git config --global user.email "bot@github.com"
           git config --global user.name "github-actions"
-          git add traffic_data.csv
-          git commit -m "Update traffic data - $(date -u)" || echo "No changes"
-          git push
+          git add -f traffic_data.csv || true
+          git diff --staged --quiet || git commit -m "Update traffic data - $(date -u)"
+          git push || true
