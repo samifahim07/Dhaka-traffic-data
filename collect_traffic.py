@@ -45,7 +45,8 @@ def fetch_travel_time(route):
     params = {
         "key": API_KEY,
         "traffic": "true",
-        "travelMode": "car"
+        "travelMode": "car",
+        "computeTravelTimeFor": "all"
     }
 
     try:
