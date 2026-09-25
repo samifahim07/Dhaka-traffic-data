@@ -1,0 +1,36 @@
+name: Collect Dhaka Traffic Data
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'  # every 10 minutes
+  workflow_dispatch:         # allows manual run too
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run script
+        run: python fetch_traffic.py
+
+      - name: Save CSV to repo
+        run: |
+          git config --global user.email "bot@github.com"
+          git config --global user.name "github-actions"
+          git add traffic_data.csv
+          git commit -m "Update traffic data - $(date -u)" || echo "No changes"
+          git push
