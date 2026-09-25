@@ -8,42 +8,43 @@ SOUTH, WEST, NORTH, EAST = 23.70, 90.33, 23.90, 90.50
 
 def fetch_traffic_roads():
     query = f"""
-    [out:json][timeout:60];
-    way["highway"]["name"](
+    [out:json][timeout:90];
+    way["highway"](
       {SOUTH},{WEST},{NORTH},{EAST}
     );
     out body;
     """
 
-    # Try up to 3 times if API fails
     for attempt in range(3):
         try:
             response = requests.post(
                 "https://overpass-api.de/api/interpreter",
                 data={"data": query},
-                timeout=60
+                timeout=90
             )
 
-            # Check if response is valid
             if response.status_code != 200:
-                print(f"Bad status code: {response.status_code}, retrying...")
-                time.sleep(10)
+                print(f"Bad status: {response.status_code}, retrying...")
+                time.sleep(15)
                 continue
 
             if not response.text.strip():
                 print(f"Empty response, retrying... (attempt {attempt+1})")
-                time.sleep(10)
+                time.sleep(15)
                 continue
 
             data = response.json()
-            break  # success
+            elements = data.get("elements", [])
+            print(f"Got {len(elements)} elements from API")
+            break
 
         except Exception as e:
             print(f"Error on attempt {attempt+1}: {e}")
-            time.sleep(10)
+            time.sleep(15)
     else:
-        print("All attempts failed. Skipping this run.")
-        return
+        # Still create CSV with error row so file always exists
+        elements = []
+        data = {"elements": []}
 
     timestamp = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
     file_exists = os.path.isfile("traffic_data.csv")
@@ -57,18 +58,22 @@ def fetch_traffic_roads():
                 "road_type", "max_speed", "lanes", "oneway"
             ])
 
-        for way in data.get("elements", []):
-            tags = way.get("tags", {})
-            writer.writerow([
-                timestamp,
-                way.get("id"),
-                tags.get("name", "N/A"),
-                tags.get("highway", "N/A"),
-                tags.get("maxspeed", "N/A"),
-                tags.get("lanes", "N/A"),
-                tags.get("oneway", "no"),
-            ])
+        if elements:
+            for way in elements:
+                tags = way.get("tags", {})
+                writer.writerow([
+                    timestamp,
+                    way.get("id"),
+                    tags.get("name", "N/A"),
+                    tags.get("highway", "N/A"),
+                    tags.get("maxspeed", "N/A"),
+                    tags.get("lanes", "N/A"),
+                    tags.get("oneway", "no"),
+                ])
+        else:
+            # Write empty row so file always gets created
+            writer.writerow([timestamp, "N/A", "N/A", "N/A", "N/A", "N/A", "N/A"])
 
-    print(f"[{timestamp}] Saved {len(data.get('elements', []))} roads")
+    print(f"[{timestamp}] Done — {len(elements)} roads saved")
 
 fetch_traffic_roads()
